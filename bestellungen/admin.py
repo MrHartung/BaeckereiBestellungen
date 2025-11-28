@@ -3,7 +3,7 @@ Admin configuration for bestellungen app.
 """
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Product, Order, OrderItem, ExportLog
+from .models import CustomUser, Product, Order, OrderItem, OrderChangeRequest, ExportLog
 
 
 @admin.register(CustomUser)
@@ -18,6 +18,12 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = UserAdmin.fieldsets + (
         ('E-Mail Verifikation', {
             'fields': ('is_verified_email', 'email_verification_token', 'email_verification_sent_at'),
+        }),
+        ('Kundendaten', {
+            'fields': ('customer_number', 'delivery_fee_cents'),
+        }),
+        ('Standard-Lieferadresse', {
+            'fields': ('default_street', 'default_city', 'default_postal_code', 'default_phone'),
         }),
     )
     
@@ -71,15 +77,19 @@ class OrderItemInline(admin.TabularInline):
 class OrderAdmin(admin.ModelAdmin):
     """Admin for Order model."""
     
-    list_display = ['id', 'user', 'status', 'total_euro', 'placed_at', 'exported_at']
-    list_filter = ['status', 'placed_at', 'exported_at']
+    list_display = ['id', 'user', 'status', 'delivery_type', 'grand_total_euro', 'placed_at', 'exported_at']
+    list_filter = ['status', 'delivery_type', 'placed_at', 'exported_at']
     search_fields = ['id', 'user__email', 'user__first_name', 'user__last_name']
     ordering = ['-created_at']
     inlines = [OrderItemInline]
     
     fieldsets = [
         ('Bestellung', {
-            'fields': ('user', 'status', 'total_cents')
+            'fields': ('user', 'status', 'total_cents', 'delivery_fee_cents')
+        }),
+        ('Lieferung/Abholung', {
+            'fields': ('delivery_type', 'desired_time', 'delivery_street', 'delivery_city', 
+                      'delivery_postal_code', 'delivery_phone', 'delivery_notes')
         }),
         ('Zeitstempel', {
             'fields': ('placed_at', 'exported_at', 'created_at', 'updated_at')
@@ -90,12 +100,17 @@ class OrderAdmin(admin.ModelAdmin):
         }),
     ]
     
-    readonly_fields = ['created_at', 'updated_at', 'total_cents']
+    readonly_fields = ['created_at', 'updated_at', 'total_cents', 'delivery_fee_cents']
     
     def total_euro(self, obj):
         """Display total in Euro."""
         return f"{obj.total_euro:.2f}€"
     total_euro.short_description = 'Gesamt'
+    
+    def grand_total_euro(self, obj):
+        """Display grand total with delivery in Euro."""
+        return f"{obj.grand_total_euro:.2f}€"
+    grand_total_euro.short_description = 'Gesamt inkl. Lieferung'
     
     actions = ['recalculate_totals']
     
@@ -105,6 +120,30 @@ class OrderAdmin(admin.ModelAdmin):
             order.calculate_total()
         self.message_user(request, f"{queryset.count()} Bestellungen wurden neuberechnet.")
     recalculate_totals.short_description = "Gesamt neu berechnen"
+
+
+@admin.register(OrderChangeRequest)
+class OrderChangeRequestAdmin(admin.ModelAdmin):
+    """Admin for OrderChangeRequest model."""
+    
+    list_display = ['id', 'order', 'request_type', 'status', 'created_at']
+    list_filter = ['request_type', 'status', 'created_at']
+    search_fields = ['order__id', 'order__user__email', 'reason']
+    ordering = ['-created_at']
+    
+    fieldsets = [
+        ('Anfrage', {
+            'fields': ('order', 'request_type', 'status', 'reason')
+        }),
+        ('Admin', {
+            'fields': ('admin_notes',)
+        }),
+        ('Zeitstempel', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    ]
+    
+    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(ExportLog)

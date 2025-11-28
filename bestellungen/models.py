@@ -16,6 +16,27 @@ class CustomUser(AbstractUser):
     email_verification_token = models.CharField(max_length=100, blank=True, null=True)
     email_verification_sent_at = models.DateTimeField(blank=True, null=True)
     
+    # Customer-specific fields
+    customer_number = models.CharField(
+        max_length=50, 
+        blank=True, 
+        null=True, 
+        unique=True,
+        verbose_name='Kundennummer'
+    )
+    delivery_fee_cents = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        verbose_name='Lieferkosten (Cent)',
+        help_text='Pauschale Lieferkosten für diesen Kunden'
+    )
+    
+    # Default delivery address
+    default_street = models.CharField(max_length=200, blank=True, verbose_name='Straße')
+    default_city = models.CharField(max_length=100, blank=True, verbose_name='Stadt')
+    default_postal_code = models.CharField(max_length=20, blank=True, verbose_name='PLZ')
+    default_phone = models.CharField(max_length=50, blank=True, verbose_name='Telefon')
+    
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
     
@@ -41,6 +62,11 @@ class CustomUser(AbstractUser):
             self.save(update_fields=['is_verified_email', 'email_verification_token'])
             return True
         return False
+    
+    @property
+    def delivery_fee_euro(self):
+        """Return delivery fee in Euro."""
+        return self.delivery_fee_cents / 100
 
 
 class Product(models.Model):
@@ -87,6 +113,11 @@ class Order(models.Model):
         ('CANCELLED', 'Storniert'),
     ]
     
+    DELIVERY_TYPE_CHOICES = [
+        ('PICKUP', 'Abholung'),
+        ('DELIVERY', 'Lieferung'),
+    ]
+    
     user = models.ForeignKey(
         CustomUser,
         on_delete=models.CASCADE,
@@ -104,6 +135,33 @@ class Order(models.Model):
         validators=[MinValueValidator(0)],
         verbose_name='Gesamt (Cent)'
     )
+    delivery_fee_cents = models.IntegerField(
+        default=0,
+        validators=[MinValueValidator(0)],
+        verbose_name='Lieferkosten (Cent)'
+    )
+    
+    # Delivery/Pickup information
+    delivery_type = models.CharField(
+        max_length=20,
+        choices=DELIVERY_TYPE_CHOICES,
+        default='DELIVERY',
+        verbose_name='Lieferart'
+    )
+    desired_time = models.DateTimeField(
+        blank=True, 
+        null=True, 
+        verbose_name='Gewünschte Uhrzeit',
+        help_text='Gewünschte Abhol- oder Lieferzeit'
+    )
+    
+    # Delivery address (can override user's default)
+    delivery_street = models.CharField(max_length=200, blank=True, verbose_name='Lieferstraße')
+    delivery_city = models.CharField(max_length=100, blank=True, verbose_name='Lieferstadt')
+    delivery_postal_code = models.CharField(max_length=20, blank=True, verbose_name='Liefer-PLZ')
+    delivery_phone = models.CharField(max_length=50, blank=True, verbose_name='Liefertelefon')
+    delivery_notes = models.TextField(blank=True, verbose_name='Lieferhinweise')
+    
     placed_at = models.DateTimeField(blank=True, null=True, verbose_name='Aufgegeben am')
     exported_at = models.DateTimeField(blank=True, null=True, verbose_name='Exportiert am')
     external_export_id = models.CharField(
@@ -128,12 +186,44 @@ class Order(models.Model):
         """Return total in Euro."""
         return self.total_cents / 100
     
+    @property
+    def grand_total_cents(self):
+        """Return total including delivery fees."""
+        return self.total_cents + self.delivery_fee_cents
+    
+    @property
+    def grand_total_euro(self):
+        """Return grand total in Euro."""
+        return self.grand_total_cents / 100
+    
+    @property
+    def is_editable(self):
+        """Check if order can still be edited (before 22:00 on placement date)."""
+        if self.status != 'PLACED' or not self.placed_at:
+            return False
+        
+        # Calculate 22:00 cutoff on the placement date
+        cutoff = self.placed_at.replace(hour=22, minute=0, second=0, microsecond=0)
+        return timezone.now() < cutoff
+    
+    @property
+    def is_cancellable(self):
+        """Same as editable - can cancel before 22:00."""
+        return self.is_editable
+    
     def calculate_total(self):
-        """Calculate and update order total from items."""
-        total = sum(item.quantity * item.unit_price_cents for item in self.items.all())
-        self.total_cents = total
-        self.save(update_fields=['total_cents'])
-        return total
+        """Calculate and update order total from items and delivery fee."""
+        items_total = sum(item.quantity * item.unit_price_cents for item in self.items.all())
+        self.total_cents = items_total
+        
+        # Set delivery fee from user's default if delivery type is DELIVERY
+        if self.delivery_type == 'DELIVERY' and self.user:
+            self.delivery_fee_cents = self.user.delivery_fee_cents
+        else:
+            self.delivery_fee_cents = 0
+        
+        self.save(update_fields=['total_cents', 'delivery_fee_cents'])
+        return self.grand_total_cents
     
     def place_order(self):
         """Place the order (change status from DRAFT to PLACED)."""
@@ -218,6 +308,51 @@ class OrderItem(models.Model):
             self.unit_price_cents = self.product.price_cents
         self.full_clean()
         super().save(*args, **kwargs)
+
+
+class OrderChangeRequest(models.Model):
+    """Request to change or cancel an exported order."""
+    
+    REQUEST_TYPE_CHOICES = [
+        ('CANCEL', 'Stornierung'),
+        ('MODIFY', 'Änderung'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Ausstehend'),
+        ('APPROVED', 'Genehmigt'),
+        ('REJECTED', 'Abgelehnt'),
+    ]
+    
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='change_requests',
+        verbose_name='Bestellung'
+    )
+    request_type = models.CharField(
+        max_length=20,
+        choices=REQUEST_TYPE_CHOICES,
+        verbose_name='Anfragetyp'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='PENDING',
+        verbose_name='Status'
+    )
+    reason = models.TextField(verbose_name='Begründung')
+    admin_notes = models.TextField(blank=True, verbose_name='Admin-Notizen')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Erstellt am')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Aktualisiert am')
+    
+    class Meta:
+        verbose_name = 'Änderungsanfrage'
+        verbose_name_plural = 'Änderungsanfragen'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.get_request_type_display()} für Bestellung #{self.order.id} - {self.get_status_display()}"
 
 
 class ExportLog(models.Model):
