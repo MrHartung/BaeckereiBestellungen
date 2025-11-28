@@ -32,7 +32,7 @@
                                 <small class="text-muted">SKU: {{ item.product.sku }}</small>
                             </td>
                             <td>{{ item.quantity }}</td>
-                            <td>{{ item.unit_price_cents|floatformat:0|stringformat:"d"|slice:":-2"|default:"0" }},{{ item.unit_price_cents|floatformat:0|stringformat:"03d"|slice:"-2:" }}€</td>
+                            <td>{{ item.unit_price_euro|floatformat:2 }}€</td>
                             <td>{{ item.subtotal_euro|floatformat:2 }}€</td>
                         </tr>
                         {% endfor %}
@@ -61,7 +61,7 @@
                 
                 <div class="d-flex justify-content-between mb-3">
                     <span>MwSt. (19%):</span>
-                    <strong>{{ order.total_euro|floatformat:2|slice:":-2"|add:"0"|mul:0.19|floatformat:2 }}€</strong>
+                    <strong>{{ order.total_euro|mul:0.19|floatformat:2 }}€</strong>
                 </div>
                 
                 <hr>

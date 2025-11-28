@@ -33,7 +33,7 @@
                             <strong>{{ item.product.name }}</strong><br>
                             <small class="text-muted">SKU: {{ item.product.sku }}</small>
                         </td>
-                        <td>{{ item.unit_price_cents|floatformat:0|stringformat:"d"|slice:":-2"|default:"0" }},{{ item.unit_price_cents|floatformat:0|stringformat:"03d"|slice:"-2:" }}€</td>
+                        <td>{{ item.unit_price_euro|floatformat:2 }}€</td>
                         <td>
                             <form method="post" action="{% url 'cart' %}" class="d-inline">
                                 {% csrf_token %}

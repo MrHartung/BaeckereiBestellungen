@@ -190,6 +190,11 @@ class OrderItem(models.Model):
         return f"{self.quantity}x {self.product.name}"
     
     @property
+    def unit_price_euro(self):
+        """Return unit price in Euro."""
+        return self.unit_price_cents / 100
+    
+    @property
     def subtotal_cents(self):
         """Return subtotal for this item in cents."""
         return self.quantity * self.unit_price_cents
