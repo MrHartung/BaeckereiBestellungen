@@ -170,6 +170,8 @@ def checkout_view(request):
     if request.method == 'POST':
         try:
             order.place_order()
+            # Create new empty cart for user
+            Order.objects.create(user=request.user, status='DRAFT')
             messages.success(
                 request,
                 f'Bestellung #{order.id} wurde erfolgreich aufgegeben!'
