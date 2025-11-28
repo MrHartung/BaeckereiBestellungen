@@ -205,4 +205,8 @@ def order_detail(request, order_id):
 @login_required
 def profile_view(request):
     """User profile view."""
-    return render(request, 'bestellungen/profile.html', {'user': request.user})
+    order_count = Order.objects.filter(user=request.user).exclude(status='DRAFT').count()
+    return render(request, 'bestellungen/profile.html', {
+        'user': request.user,
+        'order_count': order_count
+    })
