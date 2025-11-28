@@ -119,7 +119,7 @@ USE_TZ = True
 # Static files
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+# STATICFILES_DIRS = [BASE_DIR / 'static']  # Not needed for development
 
 # Media files
 MEDIA_URL = 'media/'
@@ -170,7 +170,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 AXES_FAILURE_LIMIT = env.int('AXES_FAILURE_LIMIT', default=5)
 AXES_COOLOFF_TIME = env.int('AXES_COOLOFF_TIME', default=1)  # hours
-AXES_LOCK_OUT_BY_COMBINATION_USER_AND_IP = True
+AXES_LOCKOUT_PARAMETERS = [["username", "ip_address"]]  # Lock by combination of username and IP
 
 # Export Settings
 EXPORT_CSV_PATH = env('EXPORT_CSV_PATH', default=str(BASE_DIR / 'exports'))

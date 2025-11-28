@@ -295,6 +295,30 @@ ls -la exports/  # oder /app/exports im Container
 
 ## 🔧 Troubleshooting Ubuntu VM
 
+### Problem: "Invalid HTTP_HOST header" / Bad Request (400)
+```bash
+# .env Datei bearbeiten und VM IP-Adresse hinzufügen
+nano .env
+
+# Zeile ändern zu:
+ALLOWED_HOSTS=localhost,127.0.0.1,192.168.0.113  # Deine VM IP hier
+
+# Server neu starten
+python manage.py runserver 0.0.0.0:8000
+```
+
+### Problem: SSL_ERROR_RX_RECORD_TOO_LONG im Browser
+```
+Ursache: Browser versucht HTTPS, aber Server läuft auf HTTP
+
+Lösung: Explizit http:// verwenden:
+http://192.168.0.113:8000  (NICHT https://)
+
+Falls Browser automatisch umleitet:
+- Inkognito/Privater Modus verwenden
+- Oder HSTS-Eintrag löschen (Browser-Einstellungen)
+```
+
 ### Problem: Port nicht erreichbar
 ```bash
 # Firewall-Status prüfen
@@ -335,6 +359,42 @@ source venv/bin/activate
 
 # Requirements neu installieren
 pip install -r requirements.txt
+```
+
+### Problem: Migration-Fehler "InconsistentMigrationHistory"
+```bash
+# Datenbank komplett zurücksetzen (bei SQLite)
+rm db.sqlite3
+python manage.py migrate
+python manage.py load_sample_data
+```
+
+### Problem: "no such table" Fehler
+```bash
+# Migrations erstellen und ausführen
+python manage.py makemigrations
+python manage.py migrate
+```
+
+### E-Mail-Verifikation ohne Mailserver testen
+```bash
+# Option 1: Verifikations-Token aus Console-Output kopieren
+# Bei Registrierung wird der Link in der Console ausgegeben:
+# "Verification URL: http://localhost:8000/verify-email/TOKEN"
+
+# Option 2: User manuell verifizieren (Django Shell)
+python manage.py shell
+
+# In der Shell:
+from bestellungen.models import CustomUser
+user = CustomUser.objects.get(email='test@example.com')
+user.is_email_verified = True
+user.save()
+exit()
+
+# Option 3: Verwende die vorbereiteten Test-User (bereits verifiziert)
+# User: test@example.com / testpass1234
+# Admin: admin@example.com / admin1234567890
 ```
 
 ### Server im Hintergrund laufen lassen
