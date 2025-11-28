@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Mein Profil{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">
+    <i class="bi bi-person-circle"></i> Mein Profil
+</h2>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-body">
+                <h5 class="card-title">Persönliche Daten</h5>
+                <hr>
+                
+                <p>
+                    <strong>Name:</strong><br>
+                    {{ user.get_full_name }}
+                </p>
+                
+                <p>
+                    <strong>Benutzername:</strong><br>
+                    {{ user.username }}
+                </p>
+                
+                <p>
+                    <strong>E-Mail:</strong><br>
+                    {{ user.email }}
+                    {% if user.is_verified_email %}
+                    <span class="badge bg-success ms-2">
+                        <i class="bi bi-check-circle"></i> Verifiziert
+                    </span>
+                    {% else %}
+                    <span class="badge bg-warning ms-2">
+                        <i class="bi bi-exclamation-circle"></i> Nicht verifiziert
+                    </span>
+                    {% endif %}
+                </p>
+                
+                <p>
+                    <strong>Mitglied seit:</strong><br>
+                    {{ user.date_joined|date:"d.m.Y" }}
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-body">
+                <h5 class="card-title">Statistiken</h5>
+                <hr>
+                
+                <p>
+                    <strong>Anzahl Bestellungen:</strong><br>
+                    {{ user.orders.exclude.status='DRAFT'|length }}
+                </p>
+                
+                <div class="d-grid gap-2 mt-4">
+                    <a href="{% url 'order_list' %}" class="btn btn-outline-primary">
+                        <i class="bi bi-bag-check"></i> Meine Bestellungen
+                    </a>
+                    <a href="{% url 'product_list' %}" class="btn btn-primary">
+                        <i class="bi bi-basket"></i> Weiter einkaufen
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

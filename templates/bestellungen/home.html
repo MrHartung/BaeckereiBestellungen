@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Willkommen - Bäckerei{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto text-center">
+        <h1 class="display-4 mb-4">
+            <i class="bi bi-cake2"></i> Willkommen bei unserer Bäckerei
+        </h1>
+        <p class="lead mb-4">
+            Bestellen Sie frische Backwaren bequem online und lassen Sie sich von unserer Qualität überzeugen.
+        </p>
+        
+        {% if not user.is_authenticated %}
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
+            <a href="{% url 'register' %}" class="btn btn-primary btn-lg px-4 gap-3">
+                Jetzt registrieren
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-outline-secondary btn-lg px-4">
+                Anmelden
+            </a>
+        </div>
+        {% else %}
+        <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
+            <a href="{% url 'product_list' %}" class="btn btn-primary btn-lg px-4 gap-3">
+                Jetzt bestellen
+            </a>
+            <a href="{% url 'order_list' %}" class="btn btn-outline-secondary btn-lg px-4">
+                Meine Bestellungen
+            </a>
+        </div>
+        {% endif %}
+        
+        <div class="row mt-5">
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-clock-history display-4 text-primary mb-3"></i>
+                        <h5 class="card-title">Einfach bestellen</h5>
+                        <p class="card-text">Bestellen Sie bequem von zu Hause aus - 24/7 verfügbar.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-trophy display-4 text-primary mb-3"></i>
+                        <h5 class="card-title">Frische Qualität</h5>
+                        <p class="card-text">Täglich frische Backwaren aus regionalen Zutaten.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <i class="bi bi-shield-check display-4 text-primary mb-3"></i>
+                        <h5 class="card-title">Sicher & Zuverlässig</h5>
+                        <p class="card-text">Ihre Daten sind bei uns in sicheren Händen.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

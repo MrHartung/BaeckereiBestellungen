@@ -1,0 +1,17 @@
+# Local development docker-compose override
+version: '3.8'
+
+services:
+  web:
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      - DEBUG=True
+      - EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+    volumes:
+      - ./:/app
+    ports:
+      - "8000:8000"
+
+  nginx:
+    ports:
+      - "8080:80"
