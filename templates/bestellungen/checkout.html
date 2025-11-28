@@ -49,30 +49,134 @@
     </div>
     
     <div class="col-lg-4">
-        <div class="card shadow">
-            <div class="card-body">
-                <h5 class="card-title">Zusammenfassung</h5>
-                <hr>
-                
-                <div class="d-flex justify-content-between mb-2">
-                    <span>Zwischensumme:</span>
-                    <strong>{{ order.total_euro|floatformat:2 }}€</strong>
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="card shadow mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Lieferoptionen</h5>
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Lieferart</label>
+                        <div class="form-check">
+                            <input class="form-check-input" 
+                                   type="radio" 
+                                   name="delivery_type" 
+                                   id="delivery" 
+                                   value="DELIVERY" 
+                                   checked 
+                                   onchange="toggleDeliveryAddress()">
+                            <label class="form-check-label" for="delivery">
+                                Lieferung
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" 
+                                   type="radio" 
+                                   name="delivery_type" 
+                                   id="pickup" 
+                                   value="PICKUP"
+                                   onchange="toggleDeliveryAddress()">
+                            <label class="form-check-label" for="pickup">
+                                Abholung
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="desired_date" class="form-label">Gewünschtes Datum</label>
+                        <input type="date" 
+                               class="form-control" 
+                               id="desired_date" 
+                               name="desired_date"
+                               min="{{ today|date:'Y-m-d' }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="desired_time" class="form-label">Gewünschte Uhrzeit</label>
+                        <input type="time" 
+                               class="form-control" 
+                               id="desired_time" 
+                               name="desired_time">
+                    </div>
+                    
+                    <div id="delivery-address-section">
+                        <hr>
+                        <h6>Lieferadresse</h6>
+                        
+                        <div class="mb-2">
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="delivery_street" 
+                                   placeholder="Straße und Hausnummer"
+                                   value="{{ order.delivery_street }}">
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-4 mb-2">
+                                <input type="text" 
+                                       class="form-control" 
+                                       name="delivery_postal_code" 
+                                       placeholder="PLZ"
+                                       value="{{ order.delivery_postal_code }}">
+                            </div>
+                            <div class="col-8 mb-2">
+                                <input type="text" 
+                                       class="form-control" 
+                                       name="delivery_city" 
+                                       placeholder="Stadt"
+                                       value="{{ order.delivery_city }}">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <input type="tel" 
+                                   class="form-control" 
+                                   name="delivery_phone" 
+                                   placeholder="Telefon"
+                                   value="{{ order.delivery_phone }}">
+                        </div>
+                        
+                        <div class="mb-2">
+                            <textarea class="form-control" 
+                                      name="delivery_notes" 
+                                      rows="2" 
+                                      placeholder="Lieferhinweise (optional)">{{ order.delivery_notes }}</textarea>
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="d-flex justify-content-between mb-3">
-                    <span>MwSt. (7%):</span>
-                    <strong>{{ order.total_euro|mul:0.07|floatformat:2 }}€</strong>
-                </div>
-                
-                <hr>
-                
-                <div class="d-flex justify-content-between mb-4">
-                    <strong>Gesamt:</strong>
-                    <strong class="h4 text-primary">{{ order.total_euro|floatformat:2 }}€</strong>
-                </div>
-                
-                <form method="post">
-                    {% csrf_token %}
+            </div>
+            
+            <div class="card shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Zusammenfassung</h5>
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Zwischensumme:</span>
+                        <strong>{{ order.total_euro|floatformat:2 }}€</strong>
+                    </div>
+                    
+                    {% if user.delivery_fee_cents > 0 %}
+                    <div class="d-flex justify-content-between mb-2" id="delivery-fee">
+                        <span>Lieferkosten:</span>
+                        <strong>{{ user.delivery_fee_euro|floatformat:2 }}€</strong>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>MwSt. (7%):</span>
+                        <strong>{{ order.total_euro|mul:0.07|floatformat:2 }}€</strong>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between mb-4">
+                        <strong>Gesamt:</strong>
+                        <strong class="h4 text-primary">{{ order.grand_total_euro|floatformat:2 }}€</strong>
+                    </div>
+                    
                     <div class="d-grid gap-2">
                         <button type="submit" class="btn btn-primary btn-lg">
                             <i class="bi bi-check-circle"></i> Jetzt bestellen
@@ -81,14 +185,30 @@
                             <i class="bi bi-arrow-left"></i> Zurück zum Warenkorb
                         </a>
                     </div>
-                </form>
-                
-                <div class="alert alert-info mt-3 small">
-                    <i class="bi bi-info-circle"></i> 
-                    Nach der Bestellung erhalten Sie eine Bestätigungsmail.
+                    
+                    <div class="alert alert-info mt-3 small">
+                        <i class="bi bi-info-circle"></i> 
+                        Bestellungen können bis 22:00 Uhr storniert werden.
+                    </div>
                 </div>
             </div>
-        </div>
+        </form>
     </div>
 </div>
+
+<script>
+function toggleDeliveryAddress() {
+    const deliveryRadio = document.getElementById('delivery');
+    const addressSection = document.getElementById('delivery-address-section');
+    const deliveryFee = document.getElementById('delivery-fee');
+    
+    if (deliveryRadio.checked) {
+        addressSection.style.display = 'block';
+        if (deliveryFee) deliveryFee.style.display = 'flex';
+    } else {
+        addressSection.style.display = 'none';
+        if (deliveryFee) deliveryFee.style.display = 'none';
+    }
+}
+</script>
 {% endblock %}

@@ -81,6 +81,36 @@
     </div>
     
     <div class="col-lg-4">
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Aktionen</h5>
+                <hr>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'reorder' order.id %}" class="btn btn-primary">
+                        <i class="bi bi-arrow-repeat"></i> Bestellung wiederholen
+                    </a>
+                    
+                    {% if order.is_cancellable %}
+                    <a href="{% url 'cancel_order' order.id %}" class="btn btn-danger">
+                        <i class="bi bi-x-circle"></i> Bestellung stornieren
+                    </a>
+                    {% elif order.status == 'EXPORTED' %}
+                    <a href="{% url 'request_change' order.id %}" class="btn btn-warning">
+                        <i class="bi bi-pencil-square"></i> Änderung anfragen
+                    </a>
+                    {% endif %}
+                </div>
+                
+                {% if order.is_cancellable %}
+                <div class="alert alert-info mt-3 small">
+                    <i class="bi bi-clock"></i> 
+                    Stornierbar bis heute 22:00 Uhr
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
         <div class="card shadow">
             <div class="card-body">
                 <h5 class="card-title">Kundendaten</h5>
@@ -93,6 +123,24 @@
                     <strong>E-Mail:</strong><br>
                     {{ order.user.email }}
                 </p>
+                
+                {% if order.delivery_type == 'DELIVERY' and order.delivery_street %}
+                <hr>
+                <p>
+                    <strong>Lieferadresse:</strong><br>
+                    {{ order.delivery_street }}<br>
+                    {{ order.delivery_postal_code }} {{ order.delivery_city }}<br>
+                    {% if order.delivery_phone %}Tel: {{ order.delivery_phone }}{% endif %}
+                </p>
+                {% endif %}
+                
+                {% if order.desired_time %}
+                <hr>
+                <p>
+                    <strong>{{ order.get_delivery_type_display }}:</strong><br>
+                    {{ order.desired_time|date:"d.m.Y H:i" }} Uhr
+                </p>
+                {% endif %}
             </div>
         </div>
     </div>

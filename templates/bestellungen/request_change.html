@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+
+{% block title %}Änderungsanfrage{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-pencil-square"></i> Änderungsanfrage für Bestellung #{{ order.id }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Diese Bestellung wurde bereits exportiert. Sie können eine Änderung oder Stornierung anfragen, 
+                    die vom Admin überprüft wird.
+                </div>
+                
+                <div class="mb-4">
+                    <h5>Bestelldetails:</h5>
+                    <ul class="list-unstyled">
+                        <li><strong>Bestelldatum:</strong> {{ order.placed_at|date:"d.m.Y H:i" }} Uhr</li>
+                        <li><strong>Exportiert:</strong> {{ order.exported_at|date:"d.m.Y H:i" }} Uhr</li>
+                        <li><strong>Artikel:</strong> {{ order.items.count }}</li>
+                        <li><strong>Gesamt:</strong> {{ order.grand_total_euro|floatformat:2 }}€</li>
+                    </ul>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="request_type" class="form-label">Art der Anfrage</label>
+                        <select class="form-select" id="request_type" name="request_type" required>
+                            <option value="">Bitte wählen...</option>
+                            <option value="CANCEL">Stornierung</option>
+                            <option value="MODIFY">Änderung</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Begründung</label>
+                        <textarea class="form-control" 
+                                  id="reason" 
+                                  name="reason" 
+                                  rows="5" 
+                                  placeholder="Bitte beschreiben Sie, was geändert werden soll oder warum die Bestellung storniert werden soll..."
+                                  required></textarea>
+                        <div class="form-text">
+                            Bitte geben Sie so viele Details wie möglich an.
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-send"></i> Anfrage absenden
+                        </button>
+                        <a href="{% url 'order_detail' order.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Abbrechen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

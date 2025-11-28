@@ -178,6 +178,13 @@ class Command(BaseCommand):
             
             # Pane Sardo
             {'sku': '8100', 'name': 'Pane Sardo', 'description': '750g', 'price_cents': 390, 'max_per_order': 999},
+            
+            # Zusatzartikel
+            {'sku': '9001', 'name': 'Papiertüte klein', 'description': 'Für Brötchen', 'price_cents': 10, 'max_per_order': 999},
+            {'sku': '9002', 'name': 'Papiertüte groß', 'description': 'Für Brote', 'price_cents': 20, 'max_per_order': 999},
+            {'sku': '9003', 'name': 'Stoffbeutel', 'description': 'Wiederverwendbar', 'price_cents': 250, 'max_per_order': 999},
+            {'sku': '9010', 'name': 'Paniermehl', 'description': '500g', 'price_cents': 180, 'max_per_order': 999},
+            {'sku': '9011', 'name': 'Semmelbrösel', 'description': '500g', 'price_cents': 180, 'max_per_order': 999},
         ]
         
         created_products = []

@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}Lieferadresse bearbeiten{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-geo-alt"></i> Standard-Lieferadresse bearbeiten
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="street" class="form-label">Straße und Hausnummer</label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="street" 
+                               name="street" 
+                               value="{{ user.default_street }}"
+                               placeholder="z.B. Hauptstraße 123">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="postal_code" class="form-label">PLZ</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="postal_code" 
+                                   name="postal_code" 
+                                   value="{{ user.default_postal_code }}"
+                                   placeholder="12345">
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label for="city" class="form-label">Stadt</label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="city" 
+                                   name="city" 
+                                   value="{{ user.default_city }}"
+                                   placeholder="z.B. München">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="phone" class="form-label">Telefon</label>
+                        <input type="tel" 
+                               class="form-control" 
+                               id="phone" 
+                               name="phone" 
+                               value="{{ user.default_phone }}"
+                               placeholder="z.B. 0123 456789">
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Speichern
+                        </button>
+                        <a href="{% url 'profile' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Abbrechen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

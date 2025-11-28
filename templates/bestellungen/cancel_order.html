@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}Bestellung stornieren{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Bestellung stornieren
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i>
+                    Sie sind dabei, Bestellung #{{ order.id }} zu stornieren.
+                </div>
+                
+                <h5>Bestelldetails:</h5>
+                <ul class="list-unstyled mb-4">
+                    <li><strong>Bestelldatum:</strong> {{ order.placed_at|date:"d.m.Y H:i" }} Uhr</li>
+                    <li><strong>Artikel:</strong> {{ order.items.count }}</li>
+                    <li><strong>Gesamt:</strong> {{ order.grand_total_euro|floatformat:2 }}€</li>
+                </ul>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="bi bi-x-circle"></i> Ja, Bestellung stornieren
+                        </button>
+                        <a href="{% url 'order_detail' order.id %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Abbrechen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

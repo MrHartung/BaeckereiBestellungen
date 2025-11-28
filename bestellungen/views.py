@@ -6,6 +6,7 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
+from django.utils import timezone
 from .models import CustomUser, Product, Order, OrderItem
 from .forms import RegistrationForm, LoginForm
 
@@ -168,6 +169,27 @@ def checkout_view(request):
         return redirect('product_list')
     
     if request.method == 'POST':
+        # Save delivery information
+        order.delivery_type = request.POST.get('delivery_type', 'DELIVERY')
+        
+        # Parse desired time if provided
+        desired_date = request.POST.get('desired_date')
+        desired_time_str = request.POST.get('desired_time')
+        if desired_date and desired_time_str:
+            from datetime import datetime
+            datetime_str = f"{desired_date} {desired_time_str}"
+            order.desired_time = timezone.datetime.strptime(datetime_str, '%Y-%m-%d %H:%M')
+        
+        # Save delivery address
+        if order.delivery_type == 'DELIVERY':
+            order.delivery_street = request.POST.get('delivery_street', request.user.default_street)
+            order.delivery_city = request.POST.get('delivery_city', request.user.default_city)
+            order.delivery_postal_code = request.POST.get('delivery_postal_code', request.user.default_postal_code)
+            order.delivery_phone = request.POST.get('delivery_phone', request.user.default_phone)
+            order.delivery_notes = request.POST.get('delivery_notes', '')
+        
+        order.save()
+        
         try:
             order.place_order()
             # Create new empty cart for user
@@ -179,6 +201,13 @@ def checkout_view(request):
             return redirect('order_detail', order_id=order.id)
         except ValueError as e:
             messages.error(request, str(e))
+    
+    # Pre-fill with user's default address
+    if not order.delivery_street and request.user.default_street:
+        order.delivery_street = request.user.default_street
+        order.delivery_city = request.user.default_city
+        order.delivery_postal_code = request.user.default_postal_code
+        order.delivery_phone = request.user.default_phone
     
     return render(request, 'bestellungen/checkout.html', {'order': order})
 
@@ -210,3 +239,170 @@ def profile_view(request):
         'user': request.user,
         'order_count': order_count
     })
+
+
+@login_required
+def update_address_view(request):
+    """Update user's default delivery address."""
+    if request.method == 'POST':
+        request.user.default_street = request.POST.get('street', '')
+        request.user.default_city = request.POST.get('city', '')
+        request.user.default_postal_code = request.POST.get('postal_code', '')
+        request.user.default_phone = request.POST.get('phone', '')
+        request.user.save()
+        messages.success(request, 'Lieferadresse wurde aktualisiert.')
+        return redirect('profile')
+    
+    return render(request, 'bestellungen/update_address.html', {'user': request.user})
+
+
+@login_required
+def reorder_view(request, order_id):
+    """Repeat a previous order by adding items to cart."""
+    original_order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    if original_order.status == 'DRAFT':
+        messages.error(request, 'Diese Bestellung kann nicht wiederholt werden.')
+        return redirect('order_list')
+    
+    # Get or create draft order (cart)
+    cart, created = Order.objects.get_or_create(
+        user=request.user,
+        status='DRAFT'
+    )
+    
+    # Copy items from original order to cart
+    items_added = 0
+    for item in original_order.items.all():
+        if item.product.available:
+            # Check if item already in cart
+            cart_item, created = OrderItem.objects.get_or_create(
+                order=cart,
+                product=item.product,
+                defaults={
+                    'quantity': item.quantity,
+                    'unit_price_cents': item.product.price_cents
+                }
+            )
+            
+            if not created:
+                # Update quantity if item already exists
+                cart_item.quantity += item.quantity
+                if cart_item.quantity > item.product.max_per_order:
+                    cart_item.quantity = item.product.max_per_order
+                cart_item.save()
+            
+            items_added += 1
+    
+    cart.calculate_total()
+    
+    if items_added > 0:
+        messages.success(
+            request,
+            f'{items_added} Artikel aus Bestellung #{order_id} wurden zum Warenkorb hinzugefügt.'
+        )
+    else:
+        messages.warning(request, 'Keine Artikel konnten hinzugefügt werden (nicht verfügbar).')
+    
+    return redirect('cart')
+
+
+@login_required
+def cancel_order_view(request, order_id):
+    """Cancel an order (only before 22:00 cutoff)."""
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    if not order.is_cancellable:
+        messages.error(
+            request,
+            'Diese Bestellung kann nicht mehr storniert werden. '
+            'Bitte verwenden Sie die Änderungsanfrage.'
+        )
+        return redirect('order_detail', order_id=order.id)
+    
+    if request.method == 'POST':
+        order.status = 'CANCELLED'
+        order.save(update_fields=['status'])
+        messages.success(request, f'Bestellung #{order.id} wurde storniert.')
+        return redirect('order_list')
+    
+    return render(request, 'bestellungen/cancel_order.html', {'order': order})
+
+
+@login_required
+def request_change_view(request, order_id):
+    """Request a change or cancellation for an exported order."""
+    from .models import OrderChangeRequest
+    
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    
+    if order.status not in ['PLACED', 'EXPORTED']:
+        messages.error(request, 'Für diese Bestellung kann keine Änderung angefragt werden.')
+        return redirect('order_detail', order_id=order.id)
+    
+    # Check if there's already a pending request
+    existing_request = OrderChangeRequest.objects.filter(
+        order=order,
+        status='PENDING'
+    ).first()
+    
+    if existing_request:
+        messages.warning(request, 'Es gibt bereits eine ausstehende Änderungsanfrage für diese Bestellung.')
+        return redirect('order_detail', order_id=order.id)
+    
+    if request.method == 'POST':
+        request_type = request.POST.get('request_type')
+        reason = request.POST.get('reason', '')
+        
+        if request_type and reason:
+            OrderChangeRequest.objects.create(
+                order=order,
+                request_type=request_type,
+                reason=reason
+            )
+            messages.success(
+                request,
+                'Ihre Änderungsanfrage wurde übermittelt. '
+                'Sie werden per E-Mail über die Entscheidung informiert.'
+            )
+            return redirect('order_detail', order_id=order.id)
+        else:
+            messages.error(request, 'Bitte füllen Sie alle Felder aus.')
+    
+    return render(request, 'bestellungen/request_change.html', {'order': order})
+
+
+@login_required
+def costs_view(request):
+    """Show cost overview for week and month."""
+    from django.db.models import Sum
+    from datetime import timedelta
+    
+    now = timezone.now()
+    week_ago = now - timedelta(days=7)
+    month_ago = now - timedelta(days=30)
+    
+    # Calculate costs
+    week_orders = Order.objects.filter(
+        user=request.user,
+        status__in=['PLACED', 'EXPORTED'],
+        placed_at__gte=week_ago
+    )
+    
+    month_orders = Order.objects.filter(
+        user=request.user,
+        status__in=['PLACED', 'EXPORTED'],
+        placed_at__gte=month_ago
+    )
+    
+    week_total = sum(order.grand_total_cents for order in week_orders) / 100
+    month_total = sum(order.grand_total_cents for order in month_orders) / 100
+    
+    context = {
+        'week_total': week_total,
+        'month_total': month_total,
+        'week_orders': week_orders,
+        'month_orders': month_orders,
+    }
+    
+    return render(request, 'bestellungen/costs.html', context)
