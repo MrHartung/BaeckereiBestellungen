@@ -198,17 +198,25 @@ class Order(models.Model):
     
     @property
     def is_editable(self):
-        """Check if order can still be edited (before 22:00 on placement date)."""
+        """Check if order can still be edited (before 22:00 today)."""
         if self.status != 'PLACED' or not self.placed_at:
             return False
         
-        # Calculate 22:00 cutoff on the placement date
-        cutoff = self.placed_at.replace(hour=22, minute=0, second=0, microsecond=0)
-        return timezone.now() < cutoff
+        # Calculate 22:00 cutoff for today
+        now = timezone.now()
+        cutoff_today = now.replace(hour=22, minute=0, second=0, microsecond=0)
+        
+        # If it's already after 22:00 today, can't edit
+        if now >= cutoff_today:
+            return False
+        
+        # Order must be placed today or in the future to be editable
+        # (Orders from yesterday are already past the cutoff)
+        return self.placed_at.date() >= now.date()
     
     @property
     def is_cancellable(self):
-        """Same as editable - can cancel before 22:00."""
+        """Same as editable - can cancel before 22:00 today."""
         return self.is_editable
     
     def calculate_total(self):
