@@ -100,7 +100,8 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, data):
         """Validate credentials and check email verification."""
-        user = authenticate(username=data["email"], password=data["password"])
+        request = self.context.get("request")
+        user = authenticate(request=request, username=data["email"], password=data["password"])
 
         if not user:
             raise serializers.ValidationError("Ungültige Anmeldedaten.")
@@ -118,7 +119,7 @@ class ProductSerializer(serializers.ModelSerializer):
     """Serializer for Product model."""
 
     price_euro = serializers.DecimalField(
-        max_digits=10, decimal_places=2, read_only=True, source="price_euro"
+        max_digits=10, decimal_places=2, read_only=True
     )
 
     class Meta:
