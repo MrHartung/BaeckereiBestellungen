@@ -1,6 +1,7 @@
 """
 Custom template filters for bestellungen app.
 """
+
 from django import template
 
 register = template.Library()
